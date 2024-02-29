@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	const version = 2
+
 	supply := NewSupply()
 	cmds := NewCommands()
 
@@ -42,7 +44,12 @@ func main() {
 
 	for _, cmd := range cmds.GetCommands() {
 		slog.Info("run command", "cmd", cmd)
-		supply.ApplyCommand(cmd)
+
+		if version == 2 {
+			supply.ApplyCommandV2(cmd)
+		} else {
+			supply.ApplyCommand(cmd)
+		}
 	}
 
 	fmt.Println(supply.Result())
@@ -103,6 +110,13 @@ func (s *Supply) ApplyCommand(cmd Command) {
 	}
 }
 
+func (s *Supply) ApplyCommandV2(cmd Command) {
+	slog.Info("applyV2 before", "from", cmd.Source, "to", cmd.Target, "repeats", cmd.Repeats, "stacks", s.Stacks)
+	items := s.popStackN(cmd.Source, cmd.Repeats)
+	s.pushStack(cmd.Target, items...)
+	slog.Info("applyV2 after", "from", cmd.Source, "to", cmd.Target, "repeats", cmd.Repeats, "stacks", s.Stacks)
+}
+
 func (s *Supply) popStack(stack int) string {
 	slog.Info("pop", "stack", stack, "stacks", s.Stacks)
 
@@ -111,11 +125,19 @@ func (s *Supply) popStack(stack int) string {
 	return item
 }
 
-func (s *Supply) pushStack(stack int, item string) {
-	// if stack >= len(s.Stacks) {
-	// 	s.Stacks = append(s.Stacks, []string{})
-	// }
-	s.Stacks[stack] = append([]string{item}, s.Stacks[stack]...)
+func (s *Supply) popStackN(stack int, n int) []string {
+	slog.Info("pop", "stack", stack, "stacks", s.Stacks)
+
+	items := make([]string, n)
+	copy(items, s.Stacks[stack][:n])
+	s.Stacks[stack] = s.Stacks[stack][n:]
+	return items
+}
+
+func (s *Supply) pushStack(stack int, items ...string) {
+	slog.Info("push", "stack", stack, "stacks", s.Stacks)
+
+	s.Stacks[stack] = append(items, s.Stacks[stack]...)
 }
 
 const EmptyItem = ""
