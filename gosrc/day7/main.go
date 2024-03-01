@@ -21,8 +21,6 @@ func main() {
 		slog.Info("process line", "line", line)
 
 		st = ParseCommand(line).Apply(st)
-
-		slog.Info("current state", "state", st)
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintln(os.Stderr, "reading standard input:", err)
@@ -31,6 +29,10 @@ func main() {
 	slog.Info("parsed state", "state", st)
 
 	fmt.Println(st.SumAllDirWithMaxSize(100000))
+
+	unusedSpace := 70000000 - st.root.size
+	requiredUnusedSpace := 30000000
+	fmt.Println(st.FindSmallestDirSizeBiggerThan(requiredUnusedSpace - unusedSpace))
 
 	slog.Info("done")
 }
@@ -50,6 +52,10 @@ func NewState() *State {
 
 func (s *State) SumAllDirWithMaxSize(size int) int {
 	return s.root.SumAllDirWithMaxSize(size)
+}
+
+func (s *State) FindSmallestDirSizeBiggerThan(size int) int {
+	return s.root.FindSmallestDirSizeBiggerThan(size)
 }
 
 func (s *State) String() string {
@@ -146,6 +152,22 @@ func (f *FileNode) SumAllDirWithMaxSize(size int) int {
 		sum += child.SumAllDirWithMaxSize(size)
 	}
 	return sum
+}
+
+func (f *FileNode) FindSmallestDirSizeBiggerThan(size int) int {
+	if f.size < size {
+		return -1
+	}
+
+	candidate := f.size
+	for _, child := range f.children {
+		if s := child.FindSmallestDirSizeBiggerThan(size); s > 0 {
+			if s < candidate {
+				candidate = s
+			}
+		}
+	}
+	return candidate
 }
 
 func (f *FileNode) String() string {
